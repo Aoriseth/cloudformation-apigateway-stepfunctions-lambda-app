@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  cloudformation-apigateway-stepfunctions-lambda-app
+
+  Sample SAM Template for sam-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 20
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: HelloWorldFunction
+      Handler: helloworld.App::handleRequest
+      Runtime: java8
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          PARAM1: VALUE
+      # Events:
+      #   HelloWorld:
+      #     Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+      #     Properties:
+      #       Path: /hello
+      #       Method: get
+  
+  StatesExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: StatesExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: "*"
+
+  MyStateMachine:
+    Type: "AWS::StepFunctions::StateMachine"
+    Properties:
+      DefinitionString:
+        !Sub
+        - |-
+          {
+            "Comment": "A Hello World example using an AWS Lambda function",
+            "StartAt": "HelloWorld",
+            "States": {
+              "HelloWorld": {
+                "Type": "Task",
+                "Resource": "${lambdaArn}",
+                "End": true
+              }
+            }
+          }
+        - {lambdaArn: !GetAtt [ HelloWorldFunction, Arn ]}
+      RoleArn: !GetAtt [ StatesExecutionRole, Arn]
+
+  PublicApi:
+    Type: AWS::Serverless::Api
+    Properties:
+        StageName: prod
+        DefinitionBody:
+            swagger: 2.0
+            info:
+              title:
+                Ref: AWS::StackName
+            paths:
+              /sfnonly: # api gateway invokes step function asynchronously
+                get:
+                  produces:
+                  - "application/json"
+                  responses:
+                    "200":
+                      description: "200 response"
+                      schema:
+                        $ref: "#/definitions/Empty"
+                      headers:
+                         Access-Control-Allow-Headers:
+                          type: "string"
+
+                  security: []
+                  x-amazon-apigateway-integration:
+                    responses:
+                      default:
+                        statusCode: "200"
+                        headers:
+                         Access-Control-Allow-Headers:
+                          type: "'*'"
+                    passthroughBehavior: "when_no_match"
+                    httpMethod: "POST"
+                    type: "aws"
+                    credentials: !GetAtt APIGatewayRole.Arn
+                    uri: "arn:aws:apigateway:eu-west-1:states:action/StartExecution"
+                    requestTemplates:
+                      application/json:
+                        !Sub
+                          |-
+                            {
+                              "input": "$util.escapeJavaScript($input.json('$'))",
+                              "stateMachineArn": "${MyStateMachine}"
+                            }
+
+              # /lambda2sfn: # api gateway invokes lambda synchronously, which in turn invokes the stepfunction and waits for its final result
+              #   get:
+              #     produces:
+              #     - "application/json"
+              #     responses:
+              #       "200":
+              #         description: "200 response"
+              #         schema:
+              #           $ref: "#/definitions/Empty"
+              #         headers:
+              #            Access-Control-Allow-Headers:
+              #             type: "string"
+
+              #     security: []
+              #     x-amazon-apigateway-integration:
+              #       responses:
+              #         default:
+              #           statusCode: "200"
+              #           headers:
+              #            Access-Control-Allow-Headers:
+              #             type: "'*'"
+              #       httpMethod: POST
+              #       type: aws_proxy
+              #       uri:
+              #         Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldExecutor.Arn}/invocations
+
+            definitions:
+              Empty:
+                type: "object"
+                title: "Empty Schema"
+
+  APIGatewayRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - "apigateway.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+        - "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  # HelloWorldApi:
+  #   Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+  #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn

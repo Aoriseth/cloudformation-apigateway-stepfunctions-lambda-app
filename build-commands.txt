@@ -1,0 +1,14 @@
+sam build
+sam package --output-template packaged.yaml --s3-bucket used-car-storage
+sam deploy --template-file packaged.yaml --region eu-west-1 --capabilities CAPABILITY_IAM --stack-name aws-sam-getting-started
+
+aws cloudformation describe-stacks --stack-name aws-sam-getting-started --region eu-west-1 --query "Stacks[].Outputs"
+
+
+
+example stack: https://github.com/mmuppidi/apigateway-stepfunctions-sam/blob/master/stack.yaml
+
+aws documentation:
+https://aws.amazon.com/about-aws/whats-new/2017/02/amazon-api-gateway-integration-with-aws-step-functions/
+https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-lambda-state-machine-cloudformation.html
+https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-getting-started-hello-world.html
