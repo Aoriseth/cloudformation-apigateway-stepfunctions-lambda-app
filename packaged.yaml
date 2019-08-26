@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'sam-app
+Description: 'cloudformation-apigateway-stepfunctions-lambda-app
 
   Sample SAM Template for sam-app
 
@@ -7,19 +7,6 @@ Description: 'sam-app
 Globals:
   Function:
     Timeout: 20
-Outputs:
-  HelloWorldFunction:
-    Description: Hello World Lambda Function ARN
-    Value:
-      Fn::GetAtt:
-      - HelloWorldFunction
-      - Arn
-  HelloWorldFunctionIamRole:
-    Description: Implicit IAM Role created for Hello World function
-    Value:
-      Fn::GetAtt:
-      - HelloWorldFunctionRole
-      - Arn
 Resources:
   APIGatewayRole:
     Properties:
@@ -36,9 +23,21 @@ Resources:
       - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
       Path: /
     Type: AWS::IAM::Role
+  BusinessValidationFunction:
+    Properties:
+      CodeUri: s3://used-car-storage/f39c6618a4e5415034eb9f33e809a394
+      Handler: functions.BusinessValidationFunction::handleRequest
+      Runtime: java8
+    Type: AWS::Serverless::Function
+  EnrichmentFunction:
+    Properties:
+      CodeUri: s3://used-car-storage/9a5bc035cfd31e058f092b5a6970dc33
+      Handler: functions.EnrichmentFunction::handleRequest
+      Runtime: java8
+    Type: AWS::Serverless::Function
   HelloWorldFunction:
     Properties:
-      CodeUri: s3://used-car-storage/0b989d895aea14b12d039e47d16c965f
+      CodeUri: s3://used-car-storage/21f3c816429c95ff6cdcc2199a8814c0
       Environment:
         Variables:
           PARAM1: VALUE
@@ -49,13 +48,36 @@ Resources:
     Properties:
       DefinitionString:
         Fn::Sub:
-        - "{\n  \"Comment\": \"A Hello World example using an AWS Lambda function\"\
-          ,\n  \"StartAt\": \"HelloWorld\",\n  \"States\": {\n    \"HelloWorld\":\
-          \ {\n      \"Type\": \"Task\",\n      \"Resource\": \"${lambdaArn}\",\n\
-          \      \"End\": true\n    }\n  }\n}"
-        - lambdaArn:
+        - "{\n  \"Comment\": \"Used Car dataflow\",\n  \"StartAt\": \"BusinessValidations\"\
+          ,\n  \"States\": {\n      \"BusinessValidations\": {\n          \"Catch\"\
+          : [\n              {\n                  \"ErrorEquals\": [\n           \
+          \           \"States.ALL\"\n                  ],\n                  \"Next\"\
+          : \"ErrorHandler\"\n              }\n          ],\n          \"Next\": \"\
+          Enrichment\",\n          \"Resource\": \"${lambdaBusinessValidation}\",\n\
+          \          \"Type\": \"Task\"\n      },\n      \"Enrichment\": {\n     \
+          \     \"Catch\": [\n              {\n                  \"ErrorEquals\":\
+          \ [\n                      \"States.ALL\"\n                  ],\n      \
+          \            \"Next\": \"ErrorHandler\"\n              }\n          ],\n\
+          \          \"Next\": \"StoreData\",\n          \"Resource\": \"${lambdaEnrichment}\"\
+          ,\n          \"Type\": \"Task\"\n      },\n      \"ErrorHandler\": {\n \
+          \         \"End\": true,\n          \"Resource\": \"arn:aws:lambda:eu-west-1:590045125155:function:errorHandler\"\
+          ,\n          \"Type\": \"Task\"\n      },\n      \"StoreData\": {\n    \
+          \      \"Catch\": [\n              {\n                  \"ErrorEquals\"\
+          : [\n                      \"States.ALL\"\n                  ],\n      \
+          \            \"Next\": \"ErrorHandler\"\n              }\n          ],\n\
+          \          \"End\": true,\n          \"Resource\": \"${lambdaStore}\",\n\
+          \          \"Type\": \"Task\"\n      }\n  }\n}"
+        - lambdaBusinessValidation:
             Fn::GetAtt:
-            - HelloWorldFunction
+            - BusinessValidationFunction
+            - Arn
+          lambdaEnrichment:
+            Fn::GetAtt:
+            - EnrichmentFunction
+            - Arn
+          lambdaStore:
+            Fn::GetAtt:
+            - StoreFunction
             - Arn
       RoleArn:
         Fn::GetAtt:
@@ -129,4 +151,10 @@ Resources:
           Version: '2012-10-17'
         PolicyName: StatesExecutionPolicy
     Type: AWS::IAM::Role
+  StoreFunction:
+    Properties:
+      CodeUri: s3://used-car-storage/9d1fa9592f94c0bac47cb08378c4c77e
+      Handler: functions.StoreFunction::handleRequest
+      Runtime: java8
+    Type: AWS::Serverless::Function
 Transform: AWS::Serverless-2016-10-31

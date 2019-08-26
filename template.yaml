@@ -27,6 +27,27 @@ Resources:
       #       Path: /hello
       #       Method: get
   
+  BusinessValidationFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: BusinessValidationFunction
+      Handler: functions.BusinessValidationFunction::handleRequest
+      Runtime: java8
+
+  EnrichmentFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: EnrichmentFunction
+      Handler: functions.EnrichmentFunction::handleRequest
+      Runtime: java8
+
+  StoreFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: StoreFunction
+      Handler: functions.StoreFunction::handleRequest
+      Runtime: java8
+
   StatesExecutionRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -56,17 +77,58 @@ Resources:
         !Sub
         - |-
           {
-            "Comment": "A Hello World example using an AWS Lambda function",
-            "StartAt": "HelloWorld",
+            "Comment": "Used Car dataflow",
+            "StartAt": "BusinessValidations",
             "States": {
-              "HelloWorld": {
-                "Type": "Task",
-                "Resource": "${lambdaArn}",
-                "End": true
-              }
+                "BusinessValidations": {
+                    "Catch": [
+                        {
+                            "ErrorEquals": [
+                                "States.ALL"
+                            ],
+                            "Next": "ErrorHandler"
+                        }
+                    ],
+                    "Next": "Enrichment",
+                    "Resource": "${lambdaBusinessValidation}",
+                    "Type": "Task"
+                },
+                "Enrichment": {
+                    "Catch": [
+                        {
+                            "ErrorEquals": [
+                                "States.ALL"
+                            ],
+                            "Next": "ErrorHandler"
+                        }
+                    ],
+                    "Next": "StoreData",
+                    "Resource": "${lambdaEnrichment}",
+                    "Type": "Task"
+                },
+                "ErrorHandler": {
+                    "End": true,
+                    "Resource": "arn:aws:lambda:eu-west-1:590045125155:function:errorHandler",
+                    "Type": "Task"
+                },
+                "StoreData": {
+                    "Catch": [
+                        {
+                            "ErrorEquals": [
+                                "States.ALL"
+                            ],
+                            "Next": "ErrorHandler"
+                        }
+                    ],
+                    "End": true,
+                    "Resource": "${lambdaStore}",
+                    "Type": "Task"
+                }
             }
           }
-        - {lambdaArn: !GetAtt [ HelloWorldFunction, Arn ]}
+        - {lambdaStore: !GetAtt [ StoreFunction, Arn ],
+         lambdaBusinessValidation: !GetAtt [ BusinessValidationFunction, Arn ],
+         lambdaEnrichment: !GetAtt [ EnrichmentFunction, Arn ]}
       RoleArn: !GetAtt [ StatesExecutionRole, Arn]
 
   PublicApi:
@@ -162,16 +224,17 @@ Resources:
         - "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
 
 
-Outputs:
+# Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   # HelloWorldApi:
   #   Description: "API Gateway endpoint URL for Prod stage for Hello World function"
   #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  
+  # HelloWorldFunction:
+  #   Description: "Hello World Lambda Function ARN"
+  #   Value: !GetAtt HelloWorldFunction.Arn
+  # HelloWorldFunctionIamRole:
+  #   Description: "Implicit IAM Role created for Hello World function"
+  #   Value: !GetAtt HelloWorldFunctionRole.Arn

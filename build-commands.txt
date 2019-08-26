@@ -5,6 +5,9 @@ sam deploy --template-file packaged.yaml --region eu-west-1 --capabilities CAPAB
 aws cloudformation describe-stacks --stack-name aws-sam-getting-started --region eu-west-1 --query "Stacks[].Outputs"
 
 
+aws cloudformation delete-stack --stack-name aws-sam-getting-started
+
+
 
 example stack: https://github.com/mmuppidi/apigateway-stepfunctions-sam/blob/master/stack.yaml
 
