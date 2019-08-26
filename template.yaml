@@ -48,6 +48,13 @@ Resources:
       Handler: functions.StoreFunction::handleRequest
       Runtime: java8
 
+  ErrorFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ErrorFunction
+      Handler: functions.ErrorFunction::handleRequest
+      Runtime: java8
+
   StatesExecutionRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -70,6 +77,8 @@ Resources:
                   - "lambda:InvokeFunction"
                 Resource: "*"
 
+
+# "Resource": "arn:aws:lambda:eu-west-1:590045125155:function:errorHandler",
   MyStateMachine:
     Type: "AWS::StepFunctions::StateMachine"
     Properties:
@@ -108,7 +117,7 @@ Resources:
                 },
                 "ErrorHandler": {
                     "End": true,
-                    "Resource": "arn:aws:lambda:eu-west-1:590045125155:function:errorHandler",
+                    "Resource": "${lambdaError}",
                     "Type": "Task"
                 },
                 "StoreData": {
@@ -128,7 +137,8 @@ Resources:
           }
         - {lambdaStore: !GetAtt [ StoreFunction, Arn ],
          lambdaBusinessValidation: !GetAtt [ BusinessValidationFunction, Arn ],
-         lambdaEnrichment: !GetAtt [ EnrichmentFunction, Arn ]}
+         lambdaEnrichment: !GetAtt [ EnrichmentFunction, Arn ],
+         lambdaError: !GetAtt [ ErrorFunction, Arn ]}
       RoleArn: !GetAtt [ StatesExecutionRole, Arn]
 
   PublicApi:
