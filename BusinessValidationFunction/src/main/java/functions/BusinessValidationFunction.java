@@ -15,23 +15,47 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger;
 /**
  * Handler for requests to Lambda function.
  */
-public class BusinessValidationFunction implements RequestHandler<Vehicle, Object> {
+public class BusinessValidationFunction implements RequestHandler<VehicleWithContext, VehicleWithContext> {
 
-    public Object handleRequest(final Vehicle input, final Context context) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
-        headers.put("X-Custom-Header", "application/json");
-
+    public VehicleWithContext handleRequest(final VehicleWithContext input, final Context context) {
         LambdaLogger logger = context.getLogger();
-        logger.log("received : " + input);
+        logger.log("received : " + input.toString());
 
-        if ("Toyota".equals(input.getBrand())) {
-        	return new GatewayResponse(input.toString(), headers, 200);
+        if ("Toyota".equals(input.getVehicle().getBrand())) {
+        	input.setStatus("Valid");
+        	return input;
         }else {
-        	return new GatewayResponse("Invalid", headers, 500);
+        	input.setStatus("Invalid");
+        	return input;
         }
     }
 }
+
+class VehicleWithContext{
+	private Vehicle vehicle;
+	private String status;
+
+	public Vehicle getVehicle(){
+		return this.vehicle;
+	}
+
+	public void setVehicle(Vehicle vehicle){
+		this.vehicle = vehicle;
+	}
+
+	public String getStatus(){
+		return this.status;
+	}
+
+	public void setStatus(String status){
+		this.status = status;
+	}
+
+	public String toString(){
+		return "{vehicle="+this.vehicle.toString()+"status="+this.status+"}";
+	}
+}
+
 
 class Vehicle {
 	private String id;
