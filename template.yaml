@@ -98,9 +98,20 @@ Resources:
                             "Next": "ErrorHandler"
                         }
                     ],
-                    "Next": "Enrichment",
+                    "Next": "ValidationSuccess",
                     "Resource": "${lambdaBusinessValidation}",
                     "Type": "Task"
+                },
+                "ValidationSuccess": {
+                    "Type": "Choice",
+                    "Choices":[
+                      {
+                        "Variable":"$.status",
+                        "StringEquals":"Valid",
+                        "Next":"Enrichment"
+                      }
+                    ],
+                    "Default": "StoreData"
                 },
                 "Enrichment": {
                     "Catch": [
