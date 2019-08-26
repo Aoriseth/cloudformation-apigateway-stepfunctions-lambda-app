@@ -16,7 +16,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
  */
 public class EnrichmentFunction implements RequestHandler<VehicleWithContext, VehicleWithContext> {
 
-    public Object handleRequest(final VehicleWithContext input, final Context context) {
+    public VehicleWithContext handleRequest(final VehicleWithContext input, final Context context) {
         input.getVehicle().setVhfData("[VDE,MNT,RPR]");
         return input;
     }
