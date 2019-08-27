@@ -11,49 +11,28 @@ Globals:
     Timeout: 20
 
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: HelloWorldFunction
-      Handler: helloworld.App::handleRequest
-      Runtime: java8
-      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
-        Variables:
-          PARAM1: VALUE
-      # Events:
-      #   HelloWorld:
-      #     Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-      #     Properties:
-      #       Path: /hello
-      #       Method: get
-  
-  BusinessValidationFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: BusinessValidationFunction
-      Handler: functions.BusinessValidationFunction::handleRequest
-      Runtime: java8
 
-  EnrichmentFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  LambdaDynamoDBWriteRole:
+    Type: "AWS::IAM::Role"
     Properties:
-      CodeUri: EnrichmentFunction
-      Handler: functions.EnrichmentFunction::handleRequest
-      Runtime: java8
-
-  StoreFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: StoreFunction
-      Handler: functions.StoreFunction::handleRequest
-      Runtime: java8
-
-  ErrorFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: ErrorFunction
-      Handler: functions.ErrorFunction::handleRequest
-      Runtime: java8
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: DynamoDBPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:PutItem"
+                Resource: "*"
 
   StatesExecutionRole:
     Type: "AWS::IAM::Role"
@@ -76,10 +55,46 @@ Resources:
                 Action:
                   - "lambda:InvokeFunction"
                 Resource: "*"
+        - PolicyName: DynamoDBPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:PutItem"
+                Resource: "*"
 
+  BusinessValidationFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: BusinessValidationFunction
+      Handler: functions.BusinessValidationFunction::handleRequest
+      Runtime: java8
 
-# "Resource": "arn:aws:lambda:eu-west-1:590045125155:function:errorHandler",
-  MyStateMachine:
+  EnrichmentFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: EnrichmentFunction
+      Handler: functions.EnrichmentFunction::handleRequest
+      Runtime: java8
+
+  StoreFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: StoreFunction
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      # Policies: LambdaDynamoDBWriteRole
+      Role: !GetAtt [ LambdaDynamoDBWriteRole, Arn]
+
+  ErrorFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ErrorFunction
+      Handler: functions.ErrorFunction::handleRequest
+      Runtime: java8
+
+  UsedCarStateMachine:
     Type: "AWS::StepFunctions::StateMachine"
     Properties:
       DefinitionString:
@@ -194,7 +209,7 @@ Resources:
                           |-
                             {
                               "input": "$util.escapeJavaScript($input.json('$'))",
-                              "stateMachineArn": "${MyStateMachine}"
+                              "stateMachineArn": "${UsedCarStateMachine}"
                             }
 
               # /lambda2sfn: # api gateway invokes lambda synchronously, which in turn invokes the stepfunction and waits for its final result
@@ -244,18 +259,18 @@ Resources:
         - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
         - "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
 
-
-# Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  # HelloWorldApi:
-  #   Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-  #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  
-  # HelloWorldFunction:
-  #   Description: "Hello World Lambda Function ARN"
-  #   Value: !GetAtt HelloWorldFunction.Arn
-  # HelloWorldFunctionIamRole:
-  #   Description: "Implicit IAM Role created for Hello World function"
-  #   Value: !GetAtt HelloWorldFunctionRole.Arn
+  UsedCarDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+         AttributeName: "contextId"
+         AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "contextId"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+      TableName: "vehicles"

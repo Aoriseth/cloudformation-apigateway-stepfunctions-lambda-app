@@ -15,3 +15,17 @@ aws documentation:
 https://aws.amazon.com/about-aws/whats-new/2017/02/amazon-api-gateway-integration-with-aws-step-functions/
 https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-lambda-state-machine-cloudformation.html
 https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-getting-started-hello-world.html
+
+dynamoDB Storing data:
+https://stackoverflow.com/questions/33535613/how-to-put-an-item-in-aws-dynamodb-using-aws-lambda-with-python
+
+ "PutDynamoDB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "xxxxxxxxxx",
+        "Item": {
+          "date": {"S.$": "$.date"},
+          "value": {"S.$": "$.totalcost"}
+        }
+      },

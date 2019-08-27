@@ -32,8 +32,17 @@ public class BusinessValidationFunction implements RequestHandler<VehicleWithCon
 }
 
 class VehicleWithContext{
+	private String contextId;
 	private Vehicle vehicle;
 	private String status;
+
+	public String getContextId(){
+		return this.contextId;
+	}
+
+	public void setContextId(String contextId){
+		this.contextId = contextId;
+	}
 
 	public Vehicle getVehicle(){
 		return this.vehicle;
@@ -58,27 +67,36 @@ class VehicleWithContext{
 
 
 class Vehicle {
-	private String id;
+	private String vehicleId;
 	private String brand;
+	private String vhfData;
 
-	public String getId(){
-		return id;
+	public String getVehicleId(){
+		return vehicleId;
 	}
 
 	public String getBrand(){
 		return brand;
 	}
 
-	public void setId(String id){
-		this.id = id;
+	public void setVehicleId(String vehicleId){
+		this.vehicleId = vehicleId;
 	}
 
 	public void setBrand(String brand){
 		this.brand = brand;
 	}
 
+	public String getVhfData(){
+		return this.vhfData;
+	}
+
+	public void setVhfData(String vhfData){
+		this.vhfData = vhfData;
+	}
+
 	public String toString(){
-		return "{id="+this.id + ",\n brand="+this.brand+"}";
+		return "{vehicleId="+this.vehicleId + ",\n brand="+this.brand+",\n vhfData="+this.vhfData+"}";
 	}
 
 }
