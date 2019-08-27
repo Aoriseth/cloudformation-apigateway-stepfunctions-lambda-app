@@ -177,8 +177,8 @@ Resources:
               title:
                 Ref: AWS::StackName
             paths:
-              /sfnonly: # api gateway invokes step function asynchronously
-                get:
+              /publishVehicle: # api gateway invokes step function asynchronously
+                post:
                   produces:
                   - "application/json"
                   responses:
