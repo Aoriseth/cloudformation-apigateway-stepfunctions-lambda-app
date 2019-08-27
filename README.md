@@ -1,22 +1,59 @@
 # cloudformation-apigateway-stepfunctions-lambda-app
 
-This is a sample application for creating a api-gateway -> stepfunctions -> lambda stack using sam/cloudformation - Below is a brief explanation of the project structure.
+This is a sample application for creating a api-gateway -> stepfunctions -> lambda -> dynamoDB stack using sam/cloudformation - Below is a brief explanation of the project structure.
 
 ```bash
 ├── README.md                                   <-- This instructions file
-├── HelloWorldFunction                          <-- Source for HelloWorldFunction Lambda Function
+├── BusinessValidationFunction                  <-- Source for BusinessValidationFunction Lambda Function
 │   ├── pom.xml                                 <-- Java dependencies
 │   └── src
 │       ├── main
 │       │   └── java
-│       │       └── helloworld
-│       │           ├── App.java                <-- Lambda function code
-│       │           └── GatewayResponse.java    <-- POJO for API Gateway Responses object 
+│       │       └── functions
+│       │           └── BusinessValidationFunction.java                <-- Lambda function code
+│       │           
 │       └── test                                <-- Unit tests
 │           └── java
-│               └── helloworld
-│                   └── AppTest.java
-└── template.yaml
+│               └── functions
+│                   └── BusinessValidationFunctionTest.java
+│
+├── EnrichmentFunction                          <-- Source for EnrichmentFunction Lambda Function
+│   ├── pom.xml                                 <-- Java dependencies
+│   └── src
+│       ├── main
+│       │   └── java
+│       │       └── functions
+│       │           └── EnrichmentFunction.java <-- Lambda function code
+│       │           
+│       └── test                                <-- Unit tests
+│           └── java
+│               └── functions
+│                   └── EnrichmentFunctionTest.java
+│ 
+├── ErrorFunction                               <-- Source for ErrorFunction Lambda Function
+│   ├── pom.xml                                 <-- Java dependencies
+│   └── src
+│       ├── main
+│       │   └── java
+│       │       └── functions
+│       │           └── ErrorFunction.java      <-- Lambda function code
+│       │           
+│       └── test                                <-- Unit tests
+│           └── java
+│               └── functions
+│                   └── ErrorFunctionTest.java
+│
+├── StoreFunction                              <-- Source for StoreFunction Lambda Function
+│   ├── app.py                                 <-- Lambda function code
+│   └── requirements.txt                       <-- Python dependencies
+│
+├── tests                          <-- Source for python tests
+│   └── unit
+│       └── test_handler.py                                <-- Unit tests
+│
+│ 
+├── build-commands.txt                          <-- List of commands to build and deploy with SAM. Also contains other documentation 
+└── template.yaml                               <-- SAM template with all resource definitions.
 ```
 
 ## Requirements
